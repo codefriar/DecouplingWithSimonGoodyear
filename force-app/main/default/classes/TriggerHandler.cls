@@ -16,7 +16,7 @@ public virtual class TriggerHandler {
   static {
     loopCountMap = new Map<String, LoopCount>();
     bypassedHandlers = new Set<String>();
-  }
+  } 
   
   // constructor
   public TriggerHandler() {
@@ -34,22 +34,36 @@ public virtual class TriggerHandler {
 
     addToLoopCount();
 
-    // dispatch to the correct handler method
-    if(this.context == TriggerContext.BEFORE_INSERT) {
-      this.beforeInsert();
-    } else if(this.context == TriggerContext.BEFORE_UPDATE) {
-      this.beforeUpdate();
-    } else if(this.context == TriggerContext.BEFORE_DELETE) {
-      this.beforeDelete();
-    } else if(this.context == TriggerContext.AFTER_INSERT) {
-      this.afterInsert();
-    } else if(this.context == TriggerContext.AFTER_UPDATE) {
-      this.afterUpdate();
-    } else if(this.context == TriggerContext.AFTER_DELETE) {
-      this.afterDelete();
-    } else if(this.context == TriggerContext.AFTER_UNDELETE) {
-      this.afterUndelete();
+    // find our registered trigger handlers and somehow instantiate those Classes
+    // and then call the proper methods on those classes. 
+
+    List<TriggersOfAwesome__mdt> awesomeness = [
+      SELECT Execution_Order__c, Class_Name__c FROM TriggersOfAwesome__mdt
+      ORDER BY Execution_Order__c 
+      ];
+
+    for (TriggersOfAwesome__mdt trygger: awesomeness) {
+      TriggerHandler handler = (TriggerHandler)Type.forName(trygger.Class_Name__c).newInstance();
+        // dispatch to the correct handler method
+      if(handler.context == TriggerContext.BEFORE_INSERT) {
+        handler.beforeInsert();
+      } else if(handler.context == TriggerContext.BEFORE_UPDATE) {
+        handler.beforeUpdate();
+      } else if(handler.context == TriggerContext.BEFORE_DELETE) {
+        handler.beforeDelete();
+      } else if(handler.context == TriggerContext.AFTER_INSERT) {
+        handler.afterInsert();
+      } else if(handler.context == TriggerContext.AFTER_UPDATE) {
+        handler.afterUpdate();
+      } else if(handler.context == TriggerContext.AFTER_DELETE) {
+        handler.afterDelete();
+      } else if(handler.context == TriggerContext.AFTER_UNDELETE) {
+        handler.afterUndelete();
+      }
     }
+
+
+  
 
   }
 
