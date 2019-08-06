@@ -38,10 +38,23 @@ public with sharing class CustomMDTTriggerHandler extends TriggerHandler {
        * This next line of code is crucial to transforming the string we get from
        * the custom metadata and transforming that into an actual object we can
        * call methods on.
-       * Note: all of these methods *must* extend TriggerHandler
+       * Note: all of these methods *must* extend TriggerHandler if you have a mis-match
+       * between your trigger handler class name, or the class it's extending here, the 
+       * Type.forName call can fail. 
        */
-      // prettier-ignore
-      TriggerHandler handler = (TriggerHandler) Type.forName(trygger.Class_Name__c).newInstance();
+
+      TriggerHandler handler;
+      try{
+        handler = (TriggerHandler) Type.forName(trygger.Class_Name__c).newInstance();
+      } catch (NullPointerException npe) {
+        /*
+         * If we fail to instantiate a valid object from the string name, or if
+         * the returned object does not extend TriggerHandler, skip to the next
+         * iteration of the for loop. Might want to at least tell someone.
+        */
+        continue;
+      }
+      
       // dispatch to the correct handler method
       switch on this.context {
         when BEFORE_INSERT {
@@ -73,9 +86,14 @@ public with sharing class CustomMDTTriggerHandler extends TriggerHandler {
 
   /*
    * function returns a string representation of the object type for the first object
-   * in Trigger.New
+   * in Trigger.New. Because Trigger.new is not populated in delete and undelete
+   * Trigger Contexts, this is quasi-smart in determining which to execute against.
    */
   private String getSObjectType() {
-    return Trigger.new[0].getSObjectType().getDescribe().getName();
+    if(Trigger.new != null){
+      return Trigger.new[0].getSObjectType().getDescribe().getName();
+    } else {
+      return Trigger.old[0].getSObjectType().getDescribe().getName();
+    }
   }
 }
