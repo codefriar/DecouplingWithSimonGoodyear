@@ -2,7 +2,7 @@
 
 Last Wednesday Simon Goodyear and I did a Live coding stream with a live studio audience here at Forcelandia (http://forcelandia.com/). In case you couldn't tune in, here's the recording. (https://www.youtube.com/watch?v=ilZ4-UWH6n8) Our mission for this stream was to facilitate multi-package development when there are Triggers in play. For as long as I can remember, the Trigger rule has always been: One Trigger Per Object. This makes multiple packages difficult, because the triggers, and their associated logic often cross-depend on one another. Finding a way to decouple triggers, and trigger logic from one another is a bit of a sticky wicket. 
 
-[Image: image.png][alt text: architecture overview of what we're building]
+![Architectural overview of what we're building](https://github.com/codefriar/DecouplingWithSimonGoodyear/blob/master/overview.png)
 
 The diagram above shows what we're building. The orange rectangle represents a package containing everything related to actual .trigger files, along with the Trigger Framework and a custom trigger handler class: CustomMDTTriggerHandler.cls. With this trigger package installed, any other package we create can include both the custom trigger handlers we want executed, as well as custom metadata records registering those trigger handlers. 
 
