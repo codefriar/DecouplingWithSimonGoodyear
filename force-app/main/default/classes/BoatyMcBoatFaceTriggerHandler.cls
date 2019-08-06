@@ -1,14 +1,14 @@
 public with sharing class BoatyMcBoatFaceTriggerHandler extends TriggerHandler {
   List<Account> accounts;
-  public BoatyMcBoatFaceTriggerHandler(List<Account> accounts) {
-    this.accounts = accounts;
+  public BoatyMcBoatFaceTriggerHandler() {
+    this.accounts = (List<Account>) Trigger.new;
   }
 
-  public override beforeUpdate() {
+  public override void beforeUpdate() {
     upperCaseNames();
   }
 
-  public override beforeInsert() {
+  public override void beforeInsert() {
     upperCaseNames();
   }
 
