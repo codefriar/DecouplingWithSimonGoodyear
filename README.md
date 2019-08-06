@@ -1,58 +1,33 @@
-# Salesforce App
+# Live Coding with Simon Goodyear 
 
-This guide helps Salesforce developers who are new to Visual Studio Code go from zero to a deployed app using Salesforce Extensions for VS Code and Salesforce CLI.
+Last Wednesday Simon Goodyear and I did a Live coding stream with a live studio audience here at Forcelandia (http://forcelandia.com/). In case you couldn't tune in, here's the recording. (https://www.youtube.com/watch?v=ilZ4-UWH6n8) Our mission for this stream was to facilitate multi-package development when there are Triggers in play. For as long as I can remember, the Trigger rule has always been: One Trigger Per Object. This makes multiple packages difficult, because the triggers, and their associated logic often cross-depend on one another. Finding a way to decouple triggers, and trigger logic from one another is a bit of a sticky wicket. 
 
-## Part 1: Choosing a Development Model
+[Image: image.png][alt text: architecture overview of what we're building]
 
-There are two types of developer processes or models supported in Salesforce Extensions for VS Code and Salesforce CLI. These models are explained below. Each model offers pros and cons and is fully supported.
+The diagram above shows what we're building. The orange rectangle represents a package containing everything related to actual .trigger files, along with the Trigger Framework and a custom trigger handler class: CustomMDTTriggerHandler.cls. With this trigger package installed, any other package we create can include both the custom trigger handlers we want executed, as well as custom metadata records registering those trigger handlers. 
 
-### Package Development Model
+To meet our goals of maintaining the single trigger per object, while decoupling triggers to enable packaging required us to find a way to find, at runtime, the trigger logic we wanted to run, regardless of what package it may be in. To accomplish this we used a combination of three technologies: A Trigger Framework, Custom Metadata, and Meta Programming. 
 
-The package development model allows you to create self-contained applications or libraries that are deployed to your org as a single package. These packages are typically developed against source-tracked orgs called scratch orgs. This development model is geared toward a more modern type of software development process that uses org source tracking, source control, and continuous integration and deployment.
+To save time on the stream, we started with a Trigger Framework byKevin O'Hara (https://github.com/kevinohara80)that both Simon and I have used in the past. You can read more about it here: Trigger Framework (https://github.com/kevinohara80/sfdc-trigger-framework). The key to this framework, is the virtual class it provides. Because it's virtual, extending classes can override when necessary, and inherit when no override is present. The provided virtual class defines a default .run() method. This allows your actual triggers to have nothing more than a single line of logic: 
 
-If you are starting a new project, we recommend that you consider the package development model. To start developing with this model in Visual Studio Code, see [Package Development Model with VS Code](https://forcedotcom.github.io/salesforcedx-vscode/articles/user-guide/package-development-model). For details about the model, see the [Package Development Model](https://trailhead.salesforce.com/en/content/learn/modules/sfdx_dev_model) Trailhead module.
+new MyTriggerHandlerOfAwesome().run()
 
-If you are developing against scratch orgs, use the command `SFDX: Create Project` (VS Code) or `sfdx force:project:create` (Salesforce CLI)  to create your project. If you used another command, you might want to start over with that command.
+Custom Metadata types (https://help.salesforce.com/articleView?id=custommetadatatypes_overview.htm&type=5) are a Lightning Platform feature. Not only do Custom Metadata Types allow you to create new types of data, you can package and deploy that data as well. In a multi-package Org, this means you could easily create one package defining the custom metadata type, and other packages as necessary could include deployable records. Our solution uses this technology to define a custom metadata type describing Trigger Logic. We then created records of that type to describe specific classes we wanted executed, and in what order. Having a custom metadata records means our trigger can query and get a list of classes to execute. However, the query is, at best, able to return strings of class names to us. Converting those class names into actual instantiated objects that we can manipulate is where Meta-programming comes in.
 
-When working with source-tracked orgs, use the commands `SFDX: Push Source to Org` (VS Code) or `sfdx force:source:push` (Salesforce CLI) and `SFDX: Pull Source from Org` (VS Code) or `sfdx force:source:pull` (Salesforce CLI). Do not use the `Retrieve` and `Deploy` commands with scratch orgs.
+Apex has a fairly robust Type class. One of it's charms is the ability to get a Type object for a given string. With this, we can convert the string 'SomeType' into a Type object. It's important to note that this is possible, not only with sObjects like Account and Custom_Object__C but also Apex class types. Once we have a Type object, we can call the newInstance() method to return a new object of that type. Using these two Type methods together, allows us to construct a new object dynamically, based on the string representation of the class's name we pulled from our Custom Metadata Records. Here's what that Apex looks like, fully formed
 
-### Org Development Model
-
-The org development model allows you to connect directly to a non-source-tracked org (sandbox, Developer Edition (DE) org, Trailhead Playground, or even a production org) to retrieve and deploy code directly. This model is similar to the type of development you have done in the past using tools such as Force.com IDE or MavensMate.
-
-To start developing with this model in Visual Studio Code, see [Org Development Model with VS Code](https://forcedotcom.github.io/salesforcedx-vscode/articles/user-guide/org-development-model). For details about the model, see the [Org Development Model](https://trailhead.salesforce.com/content/learn/modules/org-development-model) Trailhead module.
-
-If you are developing against non-source-tracked orgs, use the command `SFDX: Create Project with Manifest` (VS Code) or `sfdx force:project:create --manifest` (Salesforce CLI) to create your project. If you used another command, you might want to start over with this command to create a Salesforce DX project.
-
-When working with non-source-tracked orgs, use the commands `SFDX: Deploy Source to Org` (VS Code) or `sfdx force:source:deploy` (Salesforce CLI) and `SFDX: Retrieve Source from Org` (VS Code) or `sfdx force:source:retrieve` (Salesforce CLI). The `Push` and `Pull` commands work only on orgs with source tracking (scratch orgs).
-
-## The `sfdx-project.json` File
-
-The `sfdx-project.json` file contains useful configuration information for your project. See [Salesforce DX Project Configuration](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_ws_config.htm) in the _Salesforce DX Developer Guide_ for details about this file.
-
-The most important parts of this file for getting started are the `sfdcLoginUrl` and `packageDirectories` properties.
-
-The `sfdcLoginUrl` specifies the default login URL to use when authorizing an org.
-
-The `packageDirectories` filepath tells VS Code and Salesforce CLI where the metadata files for your project are stored. You need at least one package directory set in your file. The default setting is shown below. If you set the value of the `packageDirectories` property called `path` to `force-app`, by default your metadata goes in the `force-app` directory. If you want to change that directory to something like `src`, simply change the `path` value and make sure the directory you’re pointing to exists.
-
-```json
-"packageDirectories" : [
-    {
-      "path": "force-app",
-      "default": true
-    }
-]
+```apex
+TriggerHandler handler = (TriggerHandler)Type.forName(trygger.Class_Name__c).newInstance();
 ```
 
-## Part 2: Working with Source
+Note, we're having to cast the resulting object to TriggerHandler. The Trigger framework we started with requires our specific trigger handlers to extend the provided TriggerHandler class. Because our individual trigger handler classes all extend this class, we can safely cast any object we dynamically create to that Type. While this may seem like a limitation it gives us access to all of the methods defined in TriggerHandler including things like beforeInsert(), afterUpdate() etc. 
 
-For details about developing against scratch orgs, see the [Package Development Model](https://trailhead.salesforce.com/en/content/learn/modules/sfdx_dev_model) module on Trailhead or [Package Development Model with VS Code](https://forcedotcom.github.io/salesforcedx-vscode/articles/user-guide/package-development-model).
+These three bits, when combined, allow us to define a generic CustomMDTTriggerHandler class that all triggers can call. That generic TriggerMDTHandler class, is then responsible for: 
 
-For details about developing against orgs that don’t have source tracking, see the [Org Development Model](https://trailhead.salesforce.com/content/learn/modules/org-development-model) module on Trailhead or [Org Development Model with VS Code](https://forcedotcom.github.io/salesforcedx-vscode/articles/user-guide/org-development-model).
+1. Determining the sObject DML has been preformed on 
+2. Querying for Custom Metadata related to the sObject for individual trigger handlers to execute
+3. Meta-programming those class names into actual objects that are executed. 
 
-## Part 3: Deploying to Production
+Using this pattern we can ship one package, (Trigger Package) with the Trigger Framework, CustomMDTTriggerHandler, Custom Metadata Type, as well as a single trigger per object, without depending on any other code. Other packages (Domain Packages) in the org can ship specific trigger handler classes and custom metadata type records. These Domain Packages will maintain a dependency on the Trigger Package, but this is most likely, a dependency that won't cause you heartache — I.e. Updating one would likely requires no change in other packages. 
 
-Don’t deploy your code to production directly from Visual Studio Code. The deploy and retrieve commands do not support transactional operations, which means that a deployment can fail in a partial state. Also, the deploy and retrieve commands don’t run the tests needed for production deployments. The push and pull commands are disabled for orgs that don’t have source tracking, including production orgs.
-
-Deploy your changes to production using [packaging](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_dev2gp.htm) or by [converting your source](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference_force_source.htm#cli_reference_convert) into metadata format and using the [metadata deploy command](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference_force_mdapi.htm#cli_reference_deploy).
+We'll be doing more Live Coding streams here in the near future. Keep a watch on this page (https://developer.salesforce.com/event/live-coding) to register for our next one! In the mean time, if you've got an idea for something you'd like to see us Live Code, reach out to @codefriar (https://twitter.com/codefriar) on twitter with your suggestions and requests. Like what you've seen here? Check out the code base! (https://github.com/codefriar/DecouplingWithSimonGoodyear)We've also set up a Trailmix with more information on Custom Metadata, Triggers and Types (Oh My!)
