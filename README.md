@@ -10,7 +10,9 @@ To meet our goals of maintaining the single trigger per object, while decoupling
 
 To save time on the stream, we started with a Trigger Framework byKevin O'Hara (https://github.com/kevinohara80)that both Simon and I have used in the past. You can read more about it here: Trigger Framework (https://github.com/kevinohara80/sfdc-trigger-framework). The key to this framework, is the virtual class it provides. Because it's virtual, extending classes can override when necessary, and inherit when no override is present. The provided virtual class defines a default .run() method. This allows your actual triggers to have nothing more than a single line of logic: 
 
+```apex
 new MyTriggerHandlerOfAwesome().run()
+```
 
 Custom Metadata types (https://help.salesforce.com/articleView?id=custommetadatatypes_overview.htm&type=5) are a Lightning Platform feature. Not only do Custom Metadata Types allow you to create new types of data, you can package and deploy that data as well. In a multi-package Org, this means you could easily create one package defining the custom metadata type, and other packages as necessary could include deployable records. Our solution uses this technology to define a custom metadata type describing Trigger Logic. We then created records of that type to describe specific classes we wanted executed, and in what order. Having a custom metadata records means our trigger can query and get a list of classes to execute. However, the query is, at best, able to return strings of class names to us. Converting those class names into actual instantiated objects that we can manipulate is where Meta-programming comes in.
 
