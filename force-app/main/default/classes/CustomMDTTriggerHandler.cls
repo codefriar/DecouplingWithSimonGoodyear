@@ -55,30 +55,9 @@ public with sharing class CustomMDTTriggerHandler extends TriggerHandler {
         continue;
       }
       
-      // dispatch to the correct handler method
-      switch on this.context {
-        when BEFORE_INSERT {
-          handler.beforeInsert();
-        }
-        when BEFORE_UPDATE {
-          handler.beforeUpdate();
-        }
-        when BEFORE_DELETE {
-          handler.beforeDelete();
-        }
-        when AFTER_INSERT {
-          handler.afterInsert();
-        }
-        when AFTER_UPDATE {
-          handler.afterUpdate();
-        }
-        when AFTER_DELETE {
-          handler.afterDelete();
-        }
-        when AFTER_UNDELETE {
-          handler.afterUndelete();
-        }
-      }
+      // Call default handler to provide bypass and MaxLoop functionality
+      handler.run();
+      
     }
   }
 
